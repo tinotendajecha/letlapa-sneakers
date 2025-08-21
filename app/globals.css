@@ -1,0 +1,119 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@layer base {
+  :root {
+    /* Light theme - Letlapa brand colors */
+    --background: 35 20% 92%;  /* Cream base */
+    --foreground: 33 45% 20%;  /* Dark brown text */
+    --card: 35 25% 95%;
+    --card-foreground: 33 45% 20%;
+    --popover: 35 25% 95%;
+    --popover-foreground: 33 45% 20%;
+    --primary: 33 45% 25%;     /* Dark brown */
+    --primary-foreground: 35 20% 92%;
+    --secondary: 32 25% 70%;   /* Warm tan */
+    --secondary-foreground: 33 45% 20%;
+    --muted: 32 20% 85%;       /* Soft beige */
+    --muted-foreground: 33 35% 45%;
+    --accent: 32 25% 70%;      /* Warm tan */
+    --accent-foreground: 33 45% 20%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 32 15% 80%;      /* Muted taupe */
+    --input: 32 15% 85%;
+    --ring: 33 45% 25%;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    /* Dark theme - inverted with brand colors */
+    --background: 33 45% 8%;   /* Very dark brown */
+    --foreground: 35 20% 90%;  /* Light cream */
+    --card: 33 40% 12%;
+    --card-foreground: 35 20% 90%;
+    --popover: 33 40% 12%;
+    --popover-foreground: 35 20% 90%;
+    --primary: 35 20% 85%;     /* Light cream */
+    --primary-foreground: 33 45% 15%;
+    --secondary: 33 35% 20%;   /* Dark brown */
+    --secondary-foreground: 35 20% 85%;
+    --muted: 33 30% 18%;       /* Dark muted */
+    --muted-foreground: 32 15% 65%;
+    --accent: 32 25% 60%;      /* Muted tan */
+    --accent-foreground: 33 45% 15%;
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 33 25% 25%;
+    --input: 33 25% 20%;
+    --ring: 35 20% 85%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-body;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-semibold;
+  }
+}
+
+@layer components {
+  /* Glassmorphism effect */
+  .glass {
+    @apply backdrop-blur-md bg-white/10 border border-white/20;
+  }
+  
+  .glass-dark {
+    @apply backdrop-blur-md bg-black/10 border border-white/10;
+  }
+
+  /* Custom button styles */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-300 rounded-xl font-medium;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-all duration-300 rounded-xl font-medium;
+  }
+
+  /* Product card hover effect */
+  .product-card {
+    @apply transition-all duration-300 hover:scale-105 hover:shadow-xl;
+  }
+
+  /* Smooth scrollbar */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* WhatsApp floating button */
+  .whatsapp-float {
+    @apply fixed bottom-6 right-6 z-50 w-16 h-16 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all duration-300 animate-bounce-subtle;
+  }
+
+  /* Custom input styles */
+  .input-field {
+    @apply w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring transition-all duration-200;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
