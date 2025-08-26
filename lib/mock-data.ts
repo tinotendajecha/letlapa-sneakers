@@ -1,4 +1,5 @@
-import { Product } from './store';
+// Define Product type locally if './store' is missing
+import { Product } from "./store";
 
 export const mockProducts: Product[] = [
   {
