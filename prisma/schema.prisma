@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/** Enums for SA provinces & delivery window */
+enum Province {
+  GAUTENG
+  WESTERN_CAPE
+  KWAZULU_NATAL
+  EASTERN_CAPE
+  FREE_STATE
+  LIMPOPO
+  MPUMALANGA
+  NORTH_WEST
+  NORTHERN_CAPE
+}
+
+enum DeliveryWindow {
+  ANYTIME
+  WEEKDAYS_9_17
+  EVENINGS_17_20
+  WEEKENDS
+}
+
+/** Core user for custom auth (email + passwordHash) */
+model User {
+  id               String   @id @default(cuid())
+  name             String?
+  email            String   @unique
+  passwordHash     String
+  image            String?
+
+  // NEW
+  isAdmin          Boolean  @default(false)
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  profile          Profile?
+  addresses        Address[]
+  shippingPref     ShippingPreference?
+
+  defaultAddressId String?  @unique
+  defaultAddress   Address? @relation("UserDefaultAddress", fields: [defaultAddressId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  // optional, speeds up admin queries:
+  // @@index([isAdmin])
+}
+
+/** Contact numbers etc. */
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  phone     String?
+  whatsapp  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/** Multiple addresses per user */
+model Address {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  label      String?
+  line1      String
+  line2      String?
+  suburb     String?
+  province   Province
+  postalCode String?
+  country    String   @default("South Africa")
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  usersDefaultFor User[] @relation("UserDefaultAddress")
+
+  @@index([userId])
+}
+
+/** Shipping preferences (1:1) */
+model ShippingPreference {
+  id             String         @id @default(cuid())
+  userId         String         @unique
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  instructions   String?
+  deliveryWindow DeliveryWindow  @default(ANYTIME)
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}

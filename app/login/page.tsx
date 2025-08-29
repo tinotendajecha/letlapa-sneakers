@@ -2,26 +2,58 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'react-toastify';
 
 export default function LoginPage() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
+  const router = useRouter();
+  const qs = useSearchParams();
+  const redirectTo = qs.get('from') || '/';
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [showPassword, setShowPassword] = useState(false);
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement authentication with backend
-    console.log('Login attempt:', formData);
-    alert('Login functionality coming soon! This is UI only.');
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email.trim().toLowerCase(),
+          password: formData.password,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        const msg = data?.error || 'Invalid credentials';
+        setError(msg);
+        toast.error(msg);
+        return;
+      }
+
+      toast.success('Welcome back!');
+      setTimeout(() => router.push(redirectTo), 300);
+    } catch (err) {
+      console.error(err);
+      const msg = 'Something went wrong';
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleGoogleLogin = () => {
-    // TODO: Implement Google OAuth
-    alert('Google login coming soon! This is UI only.');
+    toast.info('Google login coming soon!');
   };
 
   return (
@@ -43,6 +75,13 @@ export default function LoginPage() {
 
         {/* Form */}
         <div className="bg-card rounded-xl p-8 border border-border shadow-lg">
+          {/* Error */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-medium mb-2">
@@ -56,6 +95,7 @@ export default function LoginPage() {
                 required
                 className="input-field"
                 placeholder="your.email@example.com"
+                autoComplete="email"
               />
             </div>
 
@@ -72,11 +112,13 @@ export default function LoginPage() {
                   required
                   className="input-field pr-12"
                   placeholder="Enter your password"
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -93,8 +135,8 @@ export default function LoginPage() {
               </Link>
             </div>
 
-            <Button type="submit" className="w-full" size="lg">
-              Sign In
+            <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
+              {isSubmitting ? 'Signing in…' : 'Sign In'}
             </Button>
           </form>
 
@@ -116,8 +158,9 @@ export default function LoginPage() {
             variant="outline"
             className="w-full mt-6"
             size="lg"
+            type="button"
           >
-            <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24">
+            <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24" aria-hidden="true">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
               <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -137,11 +180,11 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* TODO Notice */}
+        {/* Info */}
         <div className="text-center">
           <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
             <p className="text-sm text-yellow-800 dark:text-yellow-200">
-              ⚠️ Authentication is UI only. Backend integration required.
+              ⚠️ Authentication uses a secure cookie. Make sure JWT_SECRET is set.
             </p>
           </div>
         </div>

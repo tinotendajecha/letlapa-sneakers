@@ -8,6 +8,7 @@ import { WishlistDrawer } from '@/components/cart/wishlist-drawer';
 import { WhatsAppFloat } from '@/components/ui/whatsapp-float';
 import { ThemeProvider } from '@/components/ui/theme-provider';
 import { Toaster } from '@/components/ui/sonner';
+import ToastProvider from '@/components/ToastProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -31,7 +32,9 @@ export default function RootLayout({
         >
           <div className="min-h-screen bg-background">
             <Header />
-            <main>{children}</main>
+            <main>{children}
+              <ToastProvider />
+            </main>
             <Footer />
             
             {/* Floating Components */}
