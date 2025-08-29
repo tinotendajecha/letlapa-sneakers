@@ -81,7 +81,7 @@ export function Header() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link href="/" className="flex items-center space-x-3 mr-7">
+            <Link href="/" className="flex items-center space-x-3 mr-4">
               <div className="w-10 h-10 bg-gradient-to-br from-brand-dark-brown to-brand-warm-tan rounded-xl flex items-center justify-center">
                 <span className="text-white font-bold text-lg">L</span>
               </div>
@@ -121,6 +121,48 @@ export function Header() {
 
             {/* Right Actions */}
             <div className="flex items-center space-x-4">
+              
+
+              {/* Theme Toggle */}
+              <Button variant="ghost" size="sm" onClick={toggleTheme} className="p-2">
+                {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+              </Button>
+
+              {/* Account (fallback icon for small screens & logged out) */}
+              {!isAuthed && (
+                <Link href="/login" className="p-2 text-muted-foreground hover:text-primary transition-colors" title="Sign in">
+                  <User className="h-5 w-5" />
+                </Link>
+              )}
+
+              {/* Wishlist */}
+              <button
+                onClick={() => setWishlistOpen(true)}
+                className="relative p-2 text-muted-foreground hover:text-primary transition-colors"
+                title="Wishlist"
+              >
+                <Heart className="h-5 w-5" />
+                {wishlistItems.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {wishlistItems.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Cart */}
+              <button
+                onClick={() => setCartOpen(true)}
+                className="relative p-2 text-muted-foreground hover:text-primary transition-colors"
+                title="Cart"
+              >
+                <ShoppingCart className="h-5 w-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {cartCount}
+                  </span>
+                )}
+              </button>
+
               {/* Desktop: show socials if LOGGED OUT; else show Profile + Logout */}
               <div className="hidden md:flex items-center space-x-2">
                 {isAuthed ? (
@@ -168,46 +210,6 @@ export function Header() {
                   </>
                 )}
               </div>
-
-              {/* Theme Toggle */}
-              <Button variant="ghost" size="sm" onClick={toggleTheme} className="p-2">
-                {theme === 'light' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-              </Button>
-
-              {/* Account (fallback icon for small screens & logged out) */}
-              {!isAuthed && (
-                <Link href="/login" className="p-2 text-muted-foreground hover:text-primary transition-colors" title="Sign in">
-                  <User className="h-5 w-5" />
-                </Link>
-              )}
-
-              {/* Wishlist */}
-              <button
-                onClick={() => setWishlistOpen(true)}
-                className="relative p-2 text-muted-foreground hover:text-primary transition-colors"
-                title="Wishlist"
-              >
-                <Heart className="h-5 w-5" />
-                {wishlistItems.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {wishlistItems.length}
-                  </span>
-                )}
-              </button>
-
-              {/* Cart */}
-              <button
-                onClick={() => setCartOpen(true)}
-                className="relative p-2 text-muted-foreground hover:text-primary transition-colors"
-                title="Cart"
-              >
-                <ShoppingCart className="h-5 w-5" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {cartCount}
-                  </span>
-                )}
-              </button>
 
               {/* Mobile Menu Toggle */}
               <button
