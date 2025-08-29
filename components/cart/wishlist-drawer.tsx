@@ -62,7 +62,7 @@ export function WishlistDrawer() {
           ) : (
             <div className="p-6 space-y-6">
               {wishlistItems.map((item) => (
-                <div key={item.product.id} className="flex items-start space-x-4">
+                <div key={item.product._id} className="flex items-start space-x-4">
                   <div className="w-20 h-20 bg-secondary rounded-lg overflow-hidden flex-shrink-0">
                     <Image
                       src={item.product.images[0]}
@@ -91,7 +91,7 @@ export function WishlistDrawer() {
                         {item.product.inStock ? 'Add to Cart' : 'Out of Stock'}
                       </Button>
                       <button
-                        onClick={() => removeFromWishlist(item.product.id)}
+                        onClick={() => removeFromWishlist(item.product._id)}
                         className="p-2 text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
                       >
                         <X className="h-4 w-4" />
