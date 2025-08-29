@@ -1,29 +1,95 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, Heart, ShoppingCart, Star, Truck, Shield, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useStore } from '@/lib/store';
-import { mockProducts, mockReviews } from '@/lib/mock-data';
+import { mockReviews } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
+import { Product } from '@/lib/store';
+import { fetchProductById } from '@/lib/groq-queries/singleProduct';
+import FancyLoader from '@/components/FancyLoader';
+import FancyProductLoader from '@/components/FancyProductLoader';
 
 export default function ProductPage() {
   const params = useParams();
   const productId = params.id as string;
-  
-  const product = mockProducts.find(p => p.id === productId);
+
+  const [product, setProduct] = useState<Product | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const reviews = mockReviews.filter(r => r.productId === productId);
-  
+
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  
+
   const { addToCart, addToWishlist, removeFromWishlist, isInWishlist, setCartOpen } = useStore();
 
+  // Fetch product data with loading + error handling
+  useEffect(() => {
+    let isMounted = true;
+    const controller = new AbortController();
+
+    async function load() {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        if (!productId) {
+          throw new Error('Missing product id.');
+        }
+
+        const data = await fetchProductById(productId);
+
+        if (!isMounted) return;
+        setProduct(data ?? null);
+        setSelectedImage(0);
+      } catch (e: any) {
+        if (!isMounted) return;
+        if (e.name !== 'AbortError') {
+          setError(e?.message || 'Something went wrong loading this product.');
+        }
+      } finally {
+        if (isMounted) setIsLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
+  }, [productId]);
+
+  // --- Loading placeholder (you'll replace this div with your fancy Bolt loader) ---
+  if (isLoading) {
+    return (
+       <FancyProductLoader />
+    );
+  }
+
+  // --- Error state ---
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Couldn’t load product</h1>
+          <p className="text-muted-foreground mb-6">{error}</p>
+          <Link href="/shop">
+            <Button>Back to Shop</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Not Found ---
   if (!product) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -37,25 +103,27 @@ export default function ProductPage() {
     );
   }
 
-  const inWishlist = isInWishlist(product.id);
+  const inWishlist = isInWishlist(product._id);
 
   const handleAddToCart = () => {
     if (!selectedSize || !selectedColor) {
       alert('Please select size and color');
       return;
     }
-    
     addToCart(product, selectedSize, selectedColor, quantity);
     setCartOpen(true);
   };
 
   const handleToggleWishlist = () => {
     if (inWishlist) {
-      removeFromWishlist(product.id);
+      removeFromWishlist(product._id);
     } else {
       addToWishlist(product);
     }
   };
+
+  const images = Array.isArray(product.images) && product.images.length > 0 ? product.images : ['/placeholder.png'];
+  const safeSelectedImage = Math.min(selectedImage, images.length - 1);
 
   return (
     <div className="min-h-screen bg-background">
@@ -72,23 +140,24 @@ export default function ProductPage() {
             {/* Main Image */}
             <div className="aspect-square bg-secondary rounded-xl overflow-hidden">
               <Image
-                src={product.images[selectedImage]}
+                src={images[safeSelectedImage]}
                 alt={product.name}
                 width={600}
                 height={600}
                 className="w-full h-full object-cover"
+                priority
               />
             </div>
 
             {/* Thumbnail Images */}
             <div className="grid grid-cols-4 gap-4">
-              {product.images.map((image, index) => (
+              {images.map((image, index) => (
                 <button
                   key={index}
                   onClick={() => setSelectedImage(index)}
                   className={cn(
                     "aspect-square rounded-lg overflow-hidden border-2 transition-all",
-                    selectedImage === index ? "border-primary" : "border-transparent"
+                    safeSelectedImage === index ? "border-primary" : "border-transparent"
                   )}
                 >
                   <Image
@@ -109,7 +178,7 @@ export default function ProductPage() {
             <div>
               <p className="text-sm text-muted-foreground font-medium">{product.brand}</p>
               <h1 className="text-2xl md:text-3xl font-display font-bold mt-1">{product.name}</h1>
-              
+
               {/* Rating */}
               <div className="flex items-center space-x-2 mt-3">
                 <div className="flex items-center space-x-1">
@@ -251,7 +320,7 @@ export default function ProductPage() {
         {/* Reviews Section */}
         <div className="mt-16 border-t border-border pt-16">
           <h2 className="text-2xl font-display font-bold mb-8">Customer Reviews</h2>
-          
+
           {reviews.length > 0 ? (
             <div className="space-y-6">
               {reviews.map((review) => (
@@ -272,9 +341,7 @@ export default function ProductPage() {
                             key={i}
                             className={cn(
                               "h-4 w-4",
-                              i < review.rating
-                                ? "text-yellow-400 fill-current"
-                                : "text-muted-foreground"
+                              i < review.rating ? "text-yellow-400 fill-current" : "text-muted-foreground"
                             )}
                           />
                         ))}
@@ -296,7 +363,6 @@ export default function ProductPage() {
           <div className="mt-8 bg-muted rounded-xl p-6">
             <h3 className="font-medium mb-4">Write a Review</h3>
             <p className="text-sm text-muted-foreground">
-              {/* TODO: Implement review submission */}
               Review functionality coming soon. For now, contact us directly to share your experience!
             </p>
           </div>

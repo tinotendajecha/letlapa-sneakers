@@ -3,8 +3,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// Product Type 
 export interface Product {
-  id: string;
+  _id: string;
   name: string;
   brand: string;
   price: number;
@@ -81,13 +82,13 @@ export const useStore = create<StoreState>()(
       addToCart: (product, size, color, quantity = 1) => {
         const cartItems = get().cartItems;
         const existingItem = cartItems.find(
-          item => item.product.id === product.id && item.size === size && item.color === color
+          item => item.product._id === product._id && item.size === size && item.color === color
         );
 
         if (existingItem) {
           set({
             cartItems: cartItems.map(item =>
-              item.product.id === product.id && item.size === size && item.color === color
+              item.product._id === product._id && item.size === size && item.color === color
                 ? { ...item, quantity: item.quantity + quantity }
                 : item
             ),
@@ -107,7 +108,7 @@ export const useStore = create<StoreState>()(
 
       removeFromCart: (productId, size, color) => {
         const cartItems = get().cartItems.filter(
-          item => !(item.product.id === productId && item.size === size && item.color === color)
+          item => !(item.product._id === productId && item.size === size && item.color === color)
         );
         set({ cartItems });
 
@@ -124,7 +125,7 @@ export const useStore = create<StoreState>()(
         }
 
         const cartItems = get().cartItems.map(item =>
-          item.product.id === productId && item.size === size && item.color === color
+          item.product._id === productId && item.size === size && item.color === color
             ? { ...item, quantity }
             : item
         );
@@ -145,7 +146,7 @@ export const useStore = create<StoreState>()(
 
       addToWishlist: (product) => {
         const wishlistItems = get().wishlistItems;
-        if (!wishlistItems.some(item => item.product.id === product.id)) {
+        if (!wishlistItems.some(item => item.product._id === product._id)) {
           set({
             wishlistItems: [...wishlistItems, { product }],
           });
@@ -154,7 +155,7 @@ export const useStore = create<StoreState>()(
 
       removeFromWishlist: (productId) => {
         set({
-          wishlistItems: get().wishlistItems.filter(item => item.product.id !== productId),
+          wishlistItems: get().wishlistItems.filter(item => item.product._id !== productId),
         });
       },
 
@@ -163,7 +164,7 @@ export const useStore = create<StoreState>()(
       },
 
       isInWishlist: (productId) => {
-        return get().wishlistItems.some(item => item.product.id === productId);
+        return get().wishlistItems.some(item => item.product._id === productId);
       },
 
       // UI state

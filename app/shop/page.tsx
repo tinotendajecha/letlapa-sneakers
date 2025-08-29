@@ -1,24 +1,48 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Filter, SlidersHorizontal, X } from 'lucide-react';
 import { ProductCard } from '@/components/products/product-card';
 import { Button } from '@/components/ui/button';
 import { useStore } from '@/lib/store';
-import { mockProducts } from '@/lib/mock-data';
+// import { mockProducts } from '@/lib/mock-data';
+import { Product } from '@/lib/store';
+import { sanity } from '@/lib/sanity';
+import { fetchAllProducts } from '@/lib/groq-queries/allProducts';
+import FancyLoader from '@/components/FancyLoader';
 
 export default function ShopPage() {
+
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true); // ✅ NEW
+
+  useEffect(() => {
+    const getProducts = async () => {
+      try {
+        const products = await fetchAllProducts();
+        console.log(products)
+        setAllProducts(products);
+      } finally {
+        setLoading(false); // ✅ NEW
+      }
+    };
+
+    getProducts();
+  }, []);
+
+
   const [showFilters, setShowFilters] = useState(false);
   const { filters, updateFilters, clearFilters } = useStore();
 
-  const brands = [...new Set(mockProducts.map(p => p.brand))];
-  const categories = [...new Set(mockProducts.map(p => p.category))];
-  const allSizes = [...new Set(mockProducts.flatMap(p => p.sizes))].sort();
-  const allColors = [...new Set(mockProducts.flatMap(p => p.colors))];
+  // ✅ Make these robust to undefined arrays
+  const brands = [...new Set(allProducts.map(p => p.brand))];
+  const categories = [...new Set(allProducts.map(p => p.category))];
+  const allSizes = [...new Set(allProducts.flatMap(p => p.sizes ?? []))].sort();   // ✅ CHANGED
+  const allColors = [...new Set(allProducts.flatMap(p => p.colors ?? []))];        // ✅ CHANGED
 
   // Filter products
   const filteredProducts = useMemo(() => {
-    return mockProducts.filter(product => {
+    return allProducts.filter(product => {
       // Brand filter
       if (filters.brands.length > 0 && !filters.brands.includes(product.brand)) {
         return false;
@@ -35,13 +59,13 @@ export default function ShopPage() {
       }
 
       // Size filter
-      if (filters.sizes.length > 0 && !filters.sizes.some(size => product.sizes.includes(size))) {
+      if (filters.sizes.length > 0 && !filters.sizes.some(size => (product.sizes ?? []).includes(size))) { // ✅ CHANGED
         return false;
       }
 
       // Color filter
-      if (filters.colors.length > 0 && !filters.colors.some(color => 
-        product.colors.some(pc => pc.toLowerCase().includes(color.toLowerCase()))
+      if (filters.colors.length > 0 && !filters.colors.some(color =>
+        (product.colors ?? []).some(pc => pc.toLowerCase().includes(color.toLowerCase())) // ✅ CHANGED
       )) {
         return false;
       }
@@ -53,7 +77,7 @@ export default function ShopPage() {
 
       return true;
     });
-  }, [filters]);
+  }, [allProducts, filters]); // ✅ CHANGED: include allProducts so it recomputes after fetch
 
   // Sort products
   const sortedProducts = useMemo(() => {
@@ -67,7 +91,7 @@ export default function ShopPage() {
       case 'name':
         return sorted.sort((a, b) => a.name.localeCompare(b.name));
       case 'rating':
-        return sorted.sort((a, b) => b.rating - a.rating);
+        return sorted.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0)); // (tiny safety)
       case 'newest':
         return sorted; // Would sort by date if we had it
       default:
@@ -104,7 +128,7 @@ export default function ShopPage() {
           <div>
             <h1 className="text-3xl font-display font-bold">Shop Sneakers</h1>
             <p className="text-muted-foreground mt-2">
-              {sortedProducts.length} products found
+              {loading ? 'Loading…' : `${sortedProducts.length} products found`} {/* ✅ CHANGED */}
             </p>
           </div>
 
@@ -269,10 +293,12 @@ export default function ShopPage() {
 
           {/* Products Grid */}
           <div className="flex-1">
-            {sortedProducts.length > 0 ? (
+            {loading ? ( // ✅ NEW
+              <FancyLoader items={9} />
+            ) : sortedProducts.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 {sortedProducts.map(product => (
-                  <ProductCard key={product.id} product={product} />
+                  <ProductCard key={product._id} product={product} />
                 ))}
               </div>
             ) : (

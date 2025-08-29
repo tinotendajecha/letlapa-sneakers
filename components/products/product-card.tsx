@@ -31,18 +31,18 @@ export function ProductCard({ product, className }: ProductCardProps) {
     e.preventDefault();
     e.stopPropagation();
     
-    if (isInWishlist(product.id)) {
-      removeFromWishlist(product.id);
+    if (isInWishlist(product._id)) {
+      removeFromWishlist(product._id);
     } else {
       addToWishlist(product);
     }
   };
 
-  const inWishlist = isInWishlist(product.id);
+  const inWishlist = isInWishlist(product._id);
 
   return (
     <div className={cn("group product-card", className)}>
-      <Link href={`/product/${product.id}`}>
+      <Link href={`/product/${product._id}`}>
         <div className="relative bg-card rounded-xl overflow-hidden shadow-sm border border-border hover:shadow-xl transition-all duration-300">
           {/* Image */}
           <div className="relative aspect-square overflow-hidden bg-secondary">

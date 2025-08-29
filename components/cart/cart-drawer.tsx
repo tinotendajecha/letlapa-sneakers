@@ -55,7 +55,7 @@ export function CartDrawer() {
           ) : (
             <div className="p-6 space-y-6">
               {cartItems.map((item) => (
-                <div key={`${item.product.id}-${item.size}-${item.color}`} className="flex items-start space-x-4">
+                <div key={`${item.product._id}-${item.size}-${item.color}`} className="flex items-start space-x-4">
                   <div className="w-20 h-20 bg-secondary rounded-lg overflow-hidden flex-shrink-0">
                     <Image
                       src={item.product.images[0]}
@@ -74,14 +74,14 @@ export function CartDrawer() {
                     <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => updateCartItemQuantity(item.product.id, item.size, item.color, item.quantity - 1)}
+                          onClick={() => updateCartItemQuantity(item.product._id, item.size, item.color, item.quantity - 1)}
                           className="w-8 h-8 rounded-lg border border-border hover:bg-secondary flex items-center justify-center transition-colors"
                         >
                           <Minus className="h-3 w-3" />
                         </button>
                         <span className="w-8 text-center text-sm">{item.quantity}</span>
                         <button
-                          onClick={() => updateCartItemQuantity(item.product.id, item.size, item.color, item.quantity + 1)}
+                          onClick={() => updateCartItemQuantity(item.product._id, item.size, item.color, item.quantity + 1)}
                           className="w-8 h-8 rounded-lg border border-border hover:bg-secondary flex items-center justify-center transition-colors"
                         >
                           <Plus className="h-3 w-3" />
@@ -90,7 +90,7 @@ export function CartDrawer() {
                       <div className="text-right">
                         <p className="font-medium">R{item.product.price.toLocaleString()}</p>
                         <button
-                          onClick={() => removeFromCart(item.product.id, item.size, item.color)}
+                          onClick={() => removeFromCart(item.product._id, item.size, item.color)}
                           className="text-xs text-destructive hover:underline"
                         >
                           Remove
