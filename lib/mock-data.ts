@@ -3,7 +3,7 @@ import { Product } from "./store";
 
 export const mockProducts: Product[] = [
   {
-    id: '1',
+    _id: '1',
     name: 'Air Jordan 1 Retro High OG',
     brand: 'Jordan',
     price: 2899,
@@ -22,7 +22,7 @@ export const mockProducts: Product[] = [
     reviews: 324,
   },
   {
-    id: '2',
+    _id: '2',
     name: 'Nike Air Max 90',
     brand: 'Nike',
     price: 2199,
@@ -40,7 +40,7 @@ export const mockProducts: Product[] = [
     reviews: 189,
   },
   {
-    id: '3',
+    _id: '3',
     name: 'Adidas Yeezy Boost 350 V2',
     brand: 'Adidas',
     price: 4299,
@@ -58,7 +58,7 @@ export const mockProducts: Product[] = [
     reviews: 567,
   },
   {
-    id: '4',
+    _id: '4',
     name: 'Converse Chuck Taylor All Star',
     brand: 'Converse',
     price: 1299,
@@ -76,7 +76,7 @@ export const mockProducts: Product[] = [
     reviews: 892,
   },
   {
-    id: '5',
+    _id: '5',
     name: 'Puma RS-X',
     brand: 'Puma',
     price: 1899,
@@ -94,7 +94,7 @@ export const mockProducts: Product[] = [
     reviews: 156,
   },
   {
-    id: '6',
+    _id: '6',
     name: 'Vans Old Skool',
     brand: 'Vans',
     price: 1599,
