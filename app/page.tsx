@@ -1,11 +1,24 @@
+'use client';
 import Link from 'next/link';
 import { ArrowRight, Truck, Shield, Star } from 'lucide-react';
 import { ProductCard } from '@/components/products/product-card';
 import { Button } from '@/components/ui/button';
 import { mockProducts } from '@/lib/mock-data';
+import { fetchFeaturedProducts } from '@/lib/groq-queries/featuredProducts';
+import { Product } from '@/lib/store';
+import { useState, useEffect } from 'react';
 
 export default function Home() {
-  const featuredProducts = mockProducts.filter(product => product.featured);
+  // const featuredProducts = mockProducts.filter(product => product.featured);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      const products = await fetchFeaturedProducts();
+      setFeaturedProducts(products);
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="min-h-screen">
