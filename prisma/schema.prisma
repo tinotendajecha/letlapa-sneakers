@@ -51,6 +51,7 @@ model User {
   @@index([email])
   // optional, speeds up admin queries:
   // @@index([isAdmin])
+  Order Order[]
 }
 
 /** Contact numbers etc. */
@@ -99,4 +100,85 @@ model ShippingPreference {
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+// Orders
+
+enum OrderStatus {
+  PENDING_PAYMENT
+  PAID
+  CANCELED
+  EXPIRED
+  REFUNDED
+  FULFILLED
+}
+
+enum Currency {
+  ZAR
+}
+
+enum ShippingMethod {
+  STANDARD
+  EXPRESS
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // money in lowest unit (cents)
+  subtotal        Int
+  shippingFee     Int
+  discount        Int           @default(0)
+  total           Int
+  currency        Currency      @default(ZAR)
+
+  shippingMethod  ShippingMethod
+  deliveryWindow  DeliveryWindow  @default(ANYTIME)
+  deliveryNotes   String?
+
+  // address snapshot at the time of checkout
+  shipToName      String
+  shipToPhone     String
+  shipToLine1     String
+  shipToLine2     String?
+  shipToSuburb    String
+  shipToProvince  Province
+  shipToPostal    String
+  shipToCountry   String         @default("South Africa")
+
+  status          OrderStatus    @default(PENDING_PAYMENT)
+
+  // Paystack / payments
+  payReference    String?        @unique
+  payAccessCode   String?        // we'll fill this when we init Paystack
+  payGateway      String?        // e.g. "paystack"
+
+  items           OrderItem[]
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+model OrderItem {
+  id         String  @id @default(cuid())
+  orderId    String
+  order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId  String
+  name       String
+  brand      String?
+  image      String?
+  size       String?
+  color      String?
+
+  // unit price in cents & qty
+  price      Int
+  quantity   Int
+
+  createdAt  DateTime @default(now())
 }

@@ -286,62 +286,80 @@ export default function CheckoutPage() {
   };
 
   const handlePayNow = async () => {
-    if (!validateForm()) {
-      toast.error("Please complete all required fields");
-      return;
+  if (!validateForm()) {
+    toast.error("Please complete all required fields");
+    return;
+  }
+
+  setIsSubmitting(true);
+  try {
+    const totalsNow = computeTotals(
+      summaryItems,
+      selectedShipping === "standard" ? 9900 : 19900,
+      appliedPromo?.discount || 0
+    );
+
+    const orderPayload = {
+      items: summaryItems.map(i => ({
+        productId: i.productId,
+        name: i.name,
+        brand: i.brand,
+        image: i.image,
+        size: i.size,
+        color: i.color,
+        price: i.unitPrice,     // cents
+        quantity: i.quantity,
+      })),
+      amounts: {
+        subtotal: totalsNow.subtotal,
+        shippingFee: totalsNow.shipping,
+        discount: totalsNow.discount,
+        total: totalsNow.total,
+        currency: "ZAR",
+      },
+      contact: {
+        fullName: formData.contact.fullName,
+        cellNumber: formData.contact.cellNumber,
+      },
+      shipping: {
+        addressLine1: formData.shipping.addressLine1,
+        addressLine2: formData.shipping.addressLine2 || "",
+        suburb: formData.shipping.suburb,
+        province: formData.shipping.province, // "Gauteng", etc. (server maps to enum)
+        postalCode: formData.shipping.postalCode,
+        country: formData.shipping.country || "South Africa",
+      },
+      delivery: {
+        deliveryWindow: formData.delivery.deliveryWindow, // "anytime" | "weekdays" | "evenings" | "weekends"
+        instructions: formData.delivery.instructions || "",
+      },
+      selectedShipping, // "standard" | "express"
+    };
+
+    const res = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(orderPayload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error || "Failed to create order");
     }
+    const json = await res.json();
 
-    setIsSubmitting(true);
-    try {
-      const totals = computeTotals(
-        MOCK_CART,
-        selectedShipping === "standard" ? 9900 : 19900,
-        appliedPromo?.discount || 0
-      );
-
-      // Your server can read the user from session, so userId is optional.
-      const orderPayload = {
-  /* ... existing fields ... */
-  items: summaryItems.map(i => ({
-    productId: i.productId,
-    name: i.name,
-    brand: i.brand,
-    image: i.image,
-    size: i.size,
-    color: i.color,
-    price: i.unitPrice,
-    quantity: i.quantity,
-  })),
-  amounts: {
-    subtotal: totals.subtotal,
-    shippingFee: totals.shipping,
-    discount: totals.discount,
-    total: totals.total,
-    currency: 'ZAR',
-  },
+    toast.success("Order created. Redirecting to payment...");
+    // For now, keep your pattern; next step we’ll swap this for Paystack init+popup
+    setTimeout(() => {
+      router.push(`/checkout/success?orderId=${json.orderId}`);
+    }, 1200);
+  } catch (err:any) {
+    console.error(err);
+    toast.error(err.message || "Failed to create order. Please try again.");
+  } finally {
+    setIsSubmitting(false);
+  }
 };
-
-      const res = await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderPayload),
-      });
-
-      if (!res.ok) throw new Error("Failed to create order");
-      const json = await res.json();
-
-      toast.success("Order created. Redirecting to payment...");
-      setTimeout(() => {
-        // Your payment flow might redirect elsewhere; this keeps your current success pattern
-        router.push(`/checkout/success?orderId=${json.orderId}`);
-      }, 1200);
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to create order. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   if (loading) {
     // You can show your Fancy loader here if you want
