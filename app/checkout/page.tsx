@@ -23,6 +23,8 @@ import { formatZar, computeTotals } from "@/lib/checkout-utils";
 
 import { useStore } from '@/lib/store';
 
+import PaystackPop from "@paystack/inline-js";
+
 // ---------- Types ----------
 type SavedAddress = {
   id: string;
@@ -55,11 +57,11 @@ export default function CheckoutPage() {
   const router = useRouter();
 
   const { cartItems } = useStore();
-    const [selectedShipping, setSelectedShipping] = useState<"standard" | "express">("standard");
-    const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount: number } | null>(null);
+  const [selectedShipping, setSelectedShipping] = useState<"standard" | "express">("standard");
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount: number } | null>(null);
 
-    // Adapt store cart items -> summary items with images (for UI) + API payload
-    const summaryItems = cartItems.map((ci) => ({
+  // Adapt store cart items -> summary items with images (for UI) + API payload
+  const summaryItems = cartItems.map((ci) => ({
     id: `${ci.product._id}-${ci.size}-${ci.color}`,
     productId: ci.product._id,
     name: ci.product.name,
@@ -69,14 +71,14 @@ export default function CheckoutPage() {
     quantity: ci.quantity,
     size: ci.size,
     color: ci.color,
-    }));
+  }));
 
-    // use summaryItems instead of MOCK_CART for totals
-    const totals = computeTotals(
+  // use summaryItems instead of MOCK_CART for totals
+  const totals = computeTotals(
     summaryItems,
     selectedShipping === 'standard' ? 9900 : 19900,
     appliedPromo?.discount || 0
-    );
+  );
 
   // --------- data from server ----------
   const [email, setEmail] = useState("");
@@ -87,7 +89,7 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [promoCode, setPromoCode] = useState("");
-  
+
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState<CheckoutData>({
@@ -286,80 +288,97 @@ export default function CheckoutPage() {
   };
 
   const handlePayNow = async () => {
-  if (!validateForm()) {
-    toast.error("Please complete all required fields");
-    return;
-  }
-
-  setIsSubmitting(true);
-  try {
-    const totalsNow = computeTotals(
-      summaryItems,
-      selectedShipping === "standard" ? 9900 : 19900,
-      appliedPromo?.discount || 0
-    );
-
-    const orderPayload = {
-      items: summaryItems.map(i => ({
-        productId: i.productId,
-        name: i.name,
-        brand: i.brand,
-        image: i.image,
-        size: i.size,
-        color: i.color,
-        price: i.unitPrice,     // cents
-        quantity: i.quantity,
-      })),
-      amounts: {
-        subtotal: totalsNow.subtotal,
-        shippingFee: totalsNow.shipping,
-        discount: totalsNow.discount,
-        total: totalsNow.total,
-        currency: "ZAR",
-      },
-      contact: {
-        fullName: formData.contact.fullName,
-        cellNumber: formData.contact.cellNumber,
-      },
-      shipping: {
-        addressLine1: formData.shipping.addressLine1,
-        addressLine2: formData.shipping.addressLine2 || "",
-        suburb: formData.shipping.suburb,
-        province: formData.shipping.province, // "Gauteng", etc. (server maps to enum)
-        postalCode: formData.shipping.postalCode,
-        country: formData.shipping.country || "South Africa",
-      },
-      delivery: {
-        deliveryWindow: formData.delivery.deliveryWindow, // "anytime" | "weekdays" | "evenings" | "weekends"
-        instructions: formData.delivery.instructions || "",
-      },
-      selectedShipping, // "standard" | "express"
-    };
-
-    const res = await fetch("/api/orders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(orderPayload),
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error || "Failed to create order");
+    if (!validateForm()) {
+      toast.error("Please complete all required fields");
+      return;
     }
-    const json = await res.json();
 
-    toast.success("Order created. Redirecting to payment...");
-    // For now, keep your pattern; next step we’ll swap this for Paystack init+popup
-    setTimeout(() => {
-      router.push(`/checkout/success?orderId=${json.orderId}`);
-    }, 1200);
-  } catch (err:any) {
-    console.error(err);
-    toast.error(err.message || "Failed to create order. Please try again.");
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+    setIsSubmitting(true);
+    try {
+      const totalsNow = computeTotals(
+        summaryItems,
+        selectedShipping === "standard" ? 9900 : 19900,
+        appliedPromo?.discount || 0
+      );
+
+      const orderPayload = {
+        items: summaryItems.map(i => ({
+          productId: i.productId,
+          name: i.name,
+          brand: i.brand,
+          image: i.image,
+          size: i.size,
+          color: i.color,
+          price: i.unitPrice,     // cents
+          quantity: i.quantity,
+        })),
+        amounts: {
+          subtotal: totalsNow.subtotal,
+          shippingFee: totalsNow.shipping,
+          discount: totalsNow.discount,
+          total: totalsNow.total,
+          currency: "ZAR",
+        },
+        contact: {
+          fullName: formData.contact.fullName,
+          cellNumber: formData.contact.cellNumber,
+        },
+        shipping: {
+          addressLine1: formData.shipping.addressLine1,
+          addressLine2: formData.shipping.addressLine2 || "",
+          suburb: formData.shipping.suburb,
+          province: formData.shipping.province, // "Gauteng", etc. (server maps to enum)
+          postalCode: formData.shipping.postalCode,
+          country: formData.shipping.country || "South Africa",
+        },
+        delivery: {
+          deliveryWindow: formData.delivery.deliveryWindow, // "anytime" | "weekdays" | "evenings" | "weekends"
+          instructions: formData.delivery.instructions || "",
+        },
+        selectedShipping, // "standard" | "express"
+      };
+
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(orderPayload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || "Failed to create order");
+      }
+      const json = await res.json();
+
+      toast.success("Order created. Redirecting to payment...");
+
+      // For now, keep your pattern; next step we’ll swap this for Paystack init+popup
+      // ...inside handlePayNow after POST /api/orders succeeds:
+      const { orderId, reference } = json;
+
+      // call init to get accessCode
+      const initRes = await fetch("/api/payments/paystack/init", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      });
+      if (!initRes.ok) {
+        const err = await initRes.json().catch(() => ({}));
+        throw new Error(err?.error || "Payment init failed");
+      }
+      const { accessCode } = await initRes.json();
+
+      // open popup and resume by access code
+      const popup = new PaystackPop();
+      popup.resumeTransaction(accessCode);
+
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to create order. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (loading) {
     // You can show your Fancy loader here if you want
@@ -396,9 +415,8 @@ export default function CheckoutPage() {
                       id="fullName"
                       value={formData.contact.fullName}
                       onChange={(e) => updateFormData("contact", "fullName", e.target.value)}
-                      className={`bg-white dark:bg-[#1a120d] border-[#e5d5c8] dark:border-[#3b2a1b] text-[#3b2a1b] dark:text-[#f5f1eb] ${
-                        errors["contact.fullName"] ? "border-red-500" : ""
-                      }`}
+                      className={`bg-white dark:bg-[#1a120d] border-[#e5d5c8] dark:border-[#3b2a1b] text-[#3b2a1b] dark:text-[#f5f1eb] ${errors["contact.fullName"] ? "border-red-500" : ""
+                        }`}
                       placeholder="Enter your full name"
                     />
                     {errors["contact.fullName"] && <p className="text-red-500 text-sm mt-1">{errors["contact.fullName"]}</p>}
@@ -412,9 +430,8 @@ export default function CheckoutPage() {
                       type="email"
                       value={formData.contact.email}
                       onChange={(e) => updateFormData("contact", "email", e.target.value)}
-                      className={`bg-white dark:bg-[#1a120d] border-[#e5d5c8] dark:border-[#3b2a1b] text-[#3b2a1b] dark:text-[#f5f1eb] ${
-                        errors["contact.email"] ? "border-red-500" : ""
-                      }`}
+                      className={`bg-white dark:bg-[#1a120d] border-[#e5d5c8] dark:border-[#3b2a1b] text-[#3b2a1b] dark:text-[#f5f1eb] ${errors["contact.email"] ? "border-red-500" : ""
+                        }`}
                       placeholder="your@email.com"
                     />
                     {errors["contact.email"] && <p className="text-red-500 text-sm mt-1">{errors["contact.email"]}</p>}
@@ -434,9 +451,8 @@ export default function CheckoutPage() {
                         updateFormData("contact", "cellNumber", v);
                         if (formData.contact.whatsappSameAsCell) updateFormData("contact", "whatsappNumber", v);
                       }}
-                      className={`bg-white dark:bg-[#1a120d] border-[#e5d5c8] dark:border-[#3b2a1b] text-[#3b2a1b] dark:text-[#f5f1eb] ${
-                        errors["contact.cellNumber"] ? "border-red-500" : ""
-                      }`}
+                      className={`bg-white dark:bg-[#1a120d] border-[#e5d5c8] dark:border-[#3b2a1b] text-[#3b2a1b] dark:text-[#f5f1eb] ${errors["contact.cellNumber"] ? "border-red-500" : ""
+                        }`}
                       placeholder="+27 XX XXX XXXX"
                     />
                     {errors["contact.cellNumber"] && <p className="text-red-500 text-sm mt-1">{errors["contact.cellNumber"]}</p>}
@@ -504,9 +520,8 @@ export default function CheckoutPage() {
                       id="addressLine1"
                       value={formData.shipping.addressLine1}
                       onChange={(e) => updateFormData("shipping", "addressLine1", e.target.value)}
-                      className={`bg-white dark:bg-[#1a120d] border-[#e5d5c8] dark:border-[#3b2a1b] text-[#3b2a1b] dark:text-[#f5f1eb] ${
-                        errors["shipping.addressLine1"] ? "border-red-500" : ""
-                      }`}
+                      className={`bg-white dark:bg-[#1a120d] border-[#e5d5c8] dark:border-[#3b2a1b] text-[#3b2a1b] dark:text-[#f5f1eb] ${errors["shipping.addressLine1"] ? "border-red-500" : ""
+                        }`}
                       placeholder="Street address"
                     />
                     {errors["shipping.addressLine1"] && <p className="text-red-500 text-sm mt-1">{errors["shipping.addressLine1"]}</p>}
@@ -532,9 +547,8 @@ export default function CheckoutPage() {
                         id="suburb"
                         value={formData.shipping.suburb}
                         onChange={(e) => updateFormData("shipping", "suburb", e.target.value)}
-                        className={`bg-white dark:bg-[#1a120d] border-[#e5d5c8] dark:border-[#3b2a1b] text-[#3b2a1b] dark:text-[#f5f1eb] ${
-                          errors["shipping.suburb"] ? "border-red-500" : ""
-                        }`}
+                        className={`bg-white dark:bg-[#1a120d] border-[#e5d5c8] dark:border-[#3b2a1b] text-[#3b2a1b] dark:text-[#f5f1eb] ${errors["shipping.suburb"] ? "border-red-500" : ""
+                          }`}
                         placeholder="Suburb"
                       />
                       {errors["shipping.suburb"] && <p className="text-red-500 text-sm mt-1">{errors["shipping.suburb"]}</p>}
@@ -569,9 +583,8 @@ export default function CheckoutPage() {
                         id="postalCode"
                         value={formData.shipping.postalCode}
                         onChange={(e) => updateFormData("shipping", "postalCode", e.target.value)}
-                        className={`bg-white dark:bg-[#1a120d] border-[#e5d5c8] dark:border-[#3b2a1b] text-[#3b2a1b] dark:text-[#f5f1eb] ${
-                          errors["shipping.postalCode"] ? "border-red-500" : ""
-                        }`}
+                        className={`bg-white dark:bg-[#1a120d] border-[#e5d5c8] dark:border-[#3b2a1b] text-[#3b2a1b] dark:text-[#f5f1eb] ${errors["shipping.postalCode"] ? "border-red-500" : ""
+                          }`}
                         placeholder="0000"
                       />
                       {errors["shipping.postalCode"] && <p className="text-red-500 text-sm mt-1">{errors["shipping.postalCode"]}</p>}

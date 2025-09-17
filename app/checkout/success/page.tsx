@@ -90,7 +90,7 @@ export default function CheckoutSuccessPage() {
     const standardDays = order?.amounts.shippingFee === 9900 ? 3 : 1; // Standard vs Express
     const estimatedDate = new Date(today);
     estimatedDate.setDate(today.getDate() + standardDays);
-    
+
     return estimatedDate.toLocaleDateString("en-ZA", {
       weekday: "long",
       year: "numeric",
@@ -139,7 +139,7 @@ export default function CheckoutSuccessPage() {
     <div className="min-h-screen bg-[#faf6f1] dark:bg-[#1a120d] transition-colors">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <ProgressSteps currentStep="done" className="mb-8" />
-        
+
         {/* Success Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/30 mb-4">
@@ -169,14 +169,16 @@ export default function CheckoutSuccessPage() {
                   {order.orderId}
                 </Badge>
               </div>
-              
+
               <div className="flex justify-between items-center">
                 <span className="text-[#8b7355] dark:text-[#a8956b]">Status</span>
-                <Badge className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
-                  Payment Pending
+                <Badge className={order.status === "PAID"
+                  ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200"
+                  : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200"}>
+                  {order.status === "PAID" ? "Payment Confirmed" : "Payment Pending"}
                 </Badge>
               </div>
-              
+
               <div className="flex justify-between items-center">
                 <span className="text-[#8b7355] dark:text-[#a8956b]">Total Amount</span>
                 <span className="font-semibold text-[#3b2a1b] dark:text-[#f5f1eb]">
@@ -185,7 +187,7 @@ export default function CheckoutSuccessPage() {
               </div>
 
               <Separator className="bg-[#e5d5c8] dark:bg-[#3b2a1b]" />
-              
+
               <div>
                 <h4 className="font-semibold text-[#3b2a1b] dark:text-[#f5f1eb] mb-2">Items Ordered</h4>
                 {order.items.map((item, index) => (

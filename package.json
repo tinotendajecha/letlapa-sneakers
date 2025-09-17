@@ -83,6 +83,7 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",
+    "@types/paystack__inline-js": "^1.0.2",
     "prisma": "^6.15.0"
   }
 }
