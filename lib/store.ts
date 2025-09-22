@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 
 // Product Type 
 export interface Product {
@@ -72,6 +72,31 @@ interface StoreState {
   clearFilters: () => void;
 }
 
+// ---------- Helpers ----------
+const isServer = typeof window === 'undefined';
+
+// Provide a safe storage that only touches localStorage in the browser.
+// On the server, we return a no-op storage so build/SSG never sees window.
+const safeStorage: StateStorage =
+  !isServer
+    ? {
+        getItem: (name) => window.localStorage.getItem(name),
+        setItem: (name, value) => window.localStorage.setItem(name, value),
+        removeItem: (name) => window.localStorage.removeItem(name),
+      }
+    : {
+        getItem: () => null,
+        setItem: () => {},
+        removeItem: () => {},
+      };
+
+function computeTotals(items: CartItem[]) {
+  const cartTotal = items.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  return { cartTotal, cartCount };
+}
+
+// ---------- Store ----------
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
@@ -82,41 +107,31 @@ export const useStore = create<StoreState>()(
 
       addToCart: (product, size, color, quantity = 1) => {
         const cartItems = get().cartItems;
-        const existingItem = cartItems.find(
-          item => item.product._id === product._id && item.size === size && item.color === color
+        const existing = cartItems.find(
+          (i) => i.product._id === product._id && i.size === size && i.color === color
         );
 
-        if (existingItem) {
-          set({
-            cartItems: cartItems.map(item =>
-              item.product._id === product._id && item.size === size && item.color === color
-                ? { ...item, quantity: item.quantity + quantity }
-                : item
-            ),
-          });
+        let next: CartItem[];
+        if (existing) {
+          next = cartItems.map((i) =>
+            i.product._id === product._id && i.size === size && i.color === color
+              ? { ...i, quantity: i.quantity + quantity }
+              : i
+          );
         } else {
-          set({
-            cartItems: [...cartItems, { product, quantity, size, color }],
-          });
+          next = [...cartItems, { product, quantity, size, color }];
         }
 
-        // Update totals
-        const newCartItems = get().cartItems;
-        const total = newCartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-        const count = newCartItems.reduce((sum, item) => sum + item.quantity, 0);
-        set({ cartTotal: total, cartCount: count });
+        const { cartTotal, cartCount } = computeTotals(next);
+        set({ cartItems: next, cartTotal, cartCount });
       },
 
       removeFromCart: (productId, size, color) => {
-        const cartItems = get().cartItems.filter(
-          item => !(item.product._id === productId && item.size === size && item.color === color)
+        const next = get().cartItems.filter(
+          (i) => !(i.product._id === productId && i.size === size && i.color === color)
         );
-        set({ cartItems });
-
-        // Update totals
-        const total = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-        const count = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-        set({ cartTotal: total, cartCount: count });
+        const { cartTotal, cartCount } = computeTotals(next);
+        set({ cartItems: next, cartTotal, cartCount });
       },
 
       updateCartItemQuantity: (productId, size, color, quantity) => {
@@ -124,49 +139,34 @@ export const useStore = create<StoreState>()(
           get().removeFromCart(productId, size, color);
           return;
         }
-
-        const cartItems = get().cartItems.map(item =>
-          item.product._id === productId && item.size === size && item.color === color
-            ? { ...item, quantity }
-            : item
+        const next = get().cartItems.map((i) =>
+          i.product._id === productId && i.size === size && i.color === color
+            ? { ...i, quantity }
+            : i
         );
-        set({ cartItems });
-
-        // Update totals
-        const total = cartItems.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
-        const count = cartItems.reduce((sum, item) => sum + item.quantity, 0);
-        set({ cartTotal: total, cartCount: count });
+        const { cartTotal, cartCount } = computeTotals(next);
+        set({ cartItems: next, cartTotal, cartCount });
       },
 
       clearCart: () => {
         set({ cartItems: [], cartTotal: 0, cartCount: 0 });
       },
 
-      // Wishlist state
+      // Wishlist
       wishlistItems: [],
-
       addToWishlist: (product) => {
         const wishlistItems = get().wishlistItems;
-        if (!wishlistItems.some(item => item.product._id === product._id)) {
-          set({
-            wishlistItems: [...wishlistItems, { product }],
-          });
+        if (!wishlistItems.some((w) => w.product._id === product._id)) {
+          set({ wishlistItems: [...wishlistItems, { product }] });
         }
       },
-
       removeFromWishlist: (productId) => {
         set({
-          wishlistItems: get().wishlistItems.filter(item => item.product._id !== productId),
+          wishlistItems: get().wishlistItems.filter((w) => w.product._id !== productId),
         });
       },
-
-      clearWishlist: () => {
-        set({ wishlistItems: [] });
-      },
-
-      isInWishlist: (productId) => {
-        return get().wishlistItems.some(item => item.product._id === productId);
-      },
+      clearWishlist: () => set({ wishlistItems: [] }),
+      isInWishlist: (productId) => get().wishlistItems.some((w) => w.product._id === productId),
 
       // UI state
       isCartOpen: false,
@@ -176,7 +176,7 @@ export const useStore = create<StoreState>()(
       isMobileMenuOpen: false,
       setMobileMenuOpen: (open) => set({ isMobileMenuOpen: open }),
 
-      // Filters state
+      // Filters
       filters: {
         brands: [],
         categories: [],
@@ -186,12 +186,8 @@ export const useStore = create<StoreState>()(
         inStock: false,
         sortBy: 'featured',
       },
-
-      updateFilters: (newFilters) => {
-        set({ filters: { ...get().filters, ...newFilters } });
-      },
-
-      clearFilters: () => {
+      updateFilters: (newFilters) => set({ filters: { ...get().filters, ...newFilters } }),
+      clearFilters: () =>
         set({
           filters: {
             brands: [],
@@ -202,16 +198,33 @@ export const useStore = create<StoreState>()(
             inStock: false,
             sortBy: 'featured',
           },
-        });
-      },
+        }),
     }),
     {
       name: 'letlapa-store',
-      partialize: (state) => ({
-        cartItems: state.cartItems,
-        wishlistItems: state.wishlistItems,
-        cartTotal: state.cartTotal,
-        cartCount: state.cartCount,
+      // JSON wrapper around the safe storage (browser uses localStorage; server is no-op)
+      storage: createJSONStorage(() => safeStorage),
+      // Avoid trying to use persisted values on the server; rehydrate on client
+      skipHydration: isServer,
+      // Recompute totals after hydration so UI shows correct values
+      onRehydrateStorage: () => (state) => {
+        // state is the rehydrated partial StoreState
+        if (!state) return;
+        const nextItems = state.cartItems ?? [];
+        const { cartTotal, cartCount } = computeTotals(nextItems);
+        // we can safely call set here—closure still has access
+        // eslint-disable-next-line @typescript-eslint/no-use-before-define
+        (useStore as any).setState?.({ cartTotal, cartCount });
+      },
+      // Optionally persist only essentials
+      partialize: (s) => ({
+        cartItems: s.cartItems,
+        wishlistItems: s.wishlistItems,
+        cartTotal: s.cartTotal,
+        cartCount: s.cartCount,
+        // persist UI flags if you like:
+        // isCartOpen: s.isCartOpen,
+        // isWishlistOpen: s.isWishlistOpen,
       }),
     }
   )
