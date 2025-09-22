@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import { ArrowLeft, Heart, ShoppingCart, Star, Truck, Shield, RotateCcw } from 'lucide-react';
@@ -9,10 +9,12 @@ import { Button } from '@/components/ui/button';
 import { useStore } from '@/lib/store';
 import { mockReviews } from '@/lib/mock-data';
 import { cn } from '@/lib/utils';
-import { Product } from '@/lib/store';
+import type { Product } from '@/lib/store';
 import { fetchProductById } from '@/lib/groq-queries/singleProduct';
-import FancyLoader from '@/components/FancyLoader';
 import FancyProductLoader from '@/components/FancyProductLoader';
+
+// fixed sizes
+const FIXED_SIZES = ['3', '4', '5', '6', '7', '8', '9'] as const;
 
 export default function ProductPage() {
   const params = useParams();
@@ -22,108 +24,116 @@ export default function ProductPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const reviews = mockReviews.filter(r => r.productId === productId);
-
-  const [selectedSize, setSelectedSize] = useState('');
+  const [selectedSize, setSelectedSize] = useState<string>('');
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
 
   const { addToCart, addToWishlist, removeFromWishlist, isInWishlist, setCartOpen } = useStore();
 
-  // Fetch product data with loading + error handling
+  // ---- FETCH (runs regardless of render outcome) ----
   useEffect(() => {
-    let isMounted = true;
-    const controller = new AbortController();
-
-    async function load() {
+    let alive = true;
+    (async () => {
       try {
         setIsLoading(true);
         setError(null);
-
-        if (!productId) {
-          throw new Error('Missing product id.');
-        }
-
+        if (!productId) throw new Error('Missing product id.');
         const data = await fetchProductById(productId);
-
-        if (!isMounted) return;
+        if (!alive) return;
         setProduct(data ?? null);
         setSelectedImage(0);
       } catch (e: any) {
-        if (!isMounted) return;
-        if (e.name !== 'AbortError') {
-          setError(e?.message || 'Something went wrong loading this product.');
-        }
+        if (!alive) return;
+        if (e.name !== 'AbortError') setError(e?.message || 'Something went wrong loading this product.');
       } finally {
-        if (isMounted) setIsLoading(false);
+        if (alive) setIsLoading(false);
       }
-    }
-
-    load();
-    return () => {
-      isMounted = false;
-      controller.abort();
-    };
+    })();
+    return () => { alive = false; };
   }, [productId]);
 
-  // --- Loading placeholder (you'll replace this div with your fancy Bolt loader) ---
-  if (isLoading) {
-    return (
-       <FancyProductLoader />
-    );
-  }
+  // ---- NORMALIZATION HOOKS (always run, product may be null) ----
+  const brand = (product?.brand ?? '').trim() || 'Letlapa';
+  const name = (product?.name ?? '').trim() || 'Sneaker';
+  const description = (product?.description ?? '').toString() || 'No description available.';
 
-  // --- Error state ---
+  const price = Number(product?.price);
+  const hasPrice = Number.isFinite(price) && price >= 0;
+
+  const originalPrice = product?.originalPrice != null ? Number(product.originalPrice) : undefined;
+  const hasOriginal = Number.isFinite(originalPrice) && (originalPrice as number) > (price || 0);
+
+  const rating = Math.max(0, Math.min(5, Number(product?.rating) || 0));
+  const reviewsCount = Math.max(0, Number(product?.reviews) || 0);
+
+  const sizes = FIXED_SIZES as readonly string[];
+
+  const colors = useMemo(
+    () => (Array.isArray(product?.colors) ? product!.colors.filter(Boolean) : [] as string[]),
+    [product?.colors]
+  );
+
+  const images = useMemo(() => {
+    const arr = Array.isArray(product?.images) ? product!.images.filter(Boolean) : [];
+    if (arr.length === 0 && product?.image) arr.push(product.image);
+    return arr.length > 0 ? arr : ['/placeholder.png'];
+  }, [product?.images, product?.image]);
+
+  const safeSelectedImage = Math.min(Math.max(0, selectedImage), images.length - 1);
+  const inStock = Boolean(product?.inStock);
+  const inWishlist = product?._id ? isInWishlist(product._id) : false;
+
+  // default selections (safe to run even when product is null)
+  useEffect(() => {
+    if (!selectedSize) setSelectedSize(sizes[0]);
+  }, [selectedSize, sizes]);
+
+  useEffect(() => {
+    if (!selectedColor && colors.length > 0) setSelectedColor(colors[0]);
+  }, [colors, selectedColor]);
+
+  const canAddToCart = inStock && !!selectedSize && (colors.length === 0 || !!selectedColor);
+
+  const handleAddToCart = () => {
+    if (!product || !canAddToCart) return;
+    addToCart(product, selectedSize, selectedColor || '', quantity);
+    setCartOpen(true);
+  };
+
+  const handleToggleWishlist = () => {
+    if (!product?._id) return;
+    if (inWishlist) removeFromWishlist(product._id);
+    else addToWishlist(product);
+  };
+
+  const reviews = mockReviews.filter((r) => r.productId === productId);
+
+  // ---- RENDER (now it’s safe to early-return) ----
+  if (isLoading) return <FancyProductLoader />;
+
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-2">Couldn’t load product</h1>
           <p className="text-muted-foreground mb-6">{error}</p>
-          <Link href="/shop">
-            <Button>Back to Shop</Button>
-          </Link>
+          <Link href="/shop"><Button>Back to Shop</Button></Link>
         </div>
       </div>
     );
   }
 
-  // --- Not Found ---
   if (!product) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Product not found</h1>
-          <Link href="/shop">
-            <Button>Back to Shop</Button>
-          </Link>
+          <Link href="/shop"><Button>Back to Shop</Button></Link>
         </div>
       </div>
     );
   }
-
-  const inWishlist = isInWishlist(product._id);
-
-  const handleAddToCart = () => {
-    if (!selectedSize || !selectedColor) {
-      alert('Please select size and color');
-      return;
-    }
-    addToCart(product, selectedSize, selectedColor, quantity);
-    setCartOpen(true);
-  };
-
-  const handleToggleWishlist = () => {
-    if (inWishlist) {
-      removeFromWishlist(product._id);
-    } else {
-      addToWishlist(product);
-    }
-  };
-
-  const images = Array.isArray(product.images) && product.images.length > 0 ? product.images : ['/placeholder.png'];
-  const safeSelectedImage = Math.min(selectedImage, images.length - 1);
 
   return (
     <div className="min-h-screen bg-background">
@@ -137,11 +147,10 @@ export default function ProductPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Images */}
           <div className="space-y-4">
-            {/* Main Image */}
             <div className="aspect-square bg-secondary rounded-xl overflow-hidden">
               <Image
-                src={images[safeSelectedImage]}
-                alt={product.name}
+                src={images[safeSelectedImage] ?? '/placeholder.png'}
+                alt={name}
                 width={600}
                 height={600}
                 className="w-full h-full object-cover"
@@ -149,20 +158,19 @@ export default function ProductPage() {
               />
             </div>
 
-            {/* Thumbnail Images */}
             <div className="grid grid-cols-4 gap-4">
               {images.map((image, index) => (
                 <button
-                  key={index}
+                  key={`${image}-${index}`}
                   onClick={() => setSelectedImage(index)}
                   className={cn(
-                    "aspect-square rounded-lg overflow-hidden border-2 transition-all",
-                    safeSelectedImage === index ? "border-primary" : "border-transparent"
+                    'aspect-square rounded-lg overflow-hidden border-2 transition-all',
+                    safeSelectedImage === index ? 'border-primary' : 'border-transparent'
                   )}
                 >
                   <Image
                     src={image}
-                    alt={`${product.name} ${index + 1}`}
+                    alt={`${name} ${index + 1}`}
                     width={150}
                     height={150}
                     className="w-full h-full object-cover"
@@ -174,38 +182,33 @@ export default function ProductPage() {
 
           {/* Product Info */}
           <div className="space-y-6">
-            {/* Header */}
             <div>
-              <p className="text-sm text-muted-foreground font-medium">{product.brand}</p>
-              <h1 className="text-2xl md:text-3xl font-display font-bold mt-1">{product.name}</h1>
+              <p className="text-sm text-muted-foreground font-medium">{brand}</p>
+              <h1 className="text-2xl md:text-3xl font-display font-bold mt-1">{name}</h1>
 
-              {/* Rating */}
               <div className="flex items-center space-x-2 mt-3">
                 <div className="flex items-center space-x-1">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className={cn(
-                        "h-4 w-4",
-                        i < Math.floor(product.rating)
-                          ? "text-yellow-400 fill-current"
-                          : "text-muted-foreground"
-                      )}
+                      className={cn('h-4 w-4', i < Math.floor(rating) ? 'text-yellow-400 fill-current' : 'text-muted-foreground')}
                     />
                   ))}
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  {product.rating} ({product.reviews} reviews)
+                  {rating.toFixed(1)} ({reviewsCount} reviews)
                 </span>
               </div>
             </div>
 
             {/* Price */}
             <div className="flex items-center space-x-3">
-              <span className="text-3xl font-bold">R{product.price.toLocaleString()}</span>
-              {product.originalPrice && (
+              <span className="text-3xl font-bold">
+                {hasPrice ? `R${price.toLocaleString()}` : 'Price on request'}
+              </span>
+              {hasOriginal && (
                 <span className="text-xl text-muted-foreground line-through">
-                  R{product.originalPrice.toLocaleString()}
+                  R{(originalPrice as number).toLocaleString()}
                 </span>
               )}
             </div>
@@ -213,22 +216,22 @@ export default function ProductPage() {
             {/* Description */}
             <div>
               <h3 className="font-medium mb-2">Description</h3>
-              <p className="text-muted-foreground leading-relaxed">{product.description}</p>
+              <p className="text-muted-foreground leading-relaxed">{description}</p>
             </div>
 
-            {/* Size Selection */}
+            {/* Sizes (fixed 3–9) */}
             <div>
               <h3 className="font-medium mb-3">Size</h3>
               <div className="grid grid-cols-5 gap-2">
-                {product.sizes.map((size) => (
+                {sizes.map((size) => (
                   <button
                     key={size}
                     onClick={() => setSelectedSize(size)}
                     className={cn(
-                      "p-3 text-sm rounded-lg border transition-all",
+                      'p-3 text-sm rounded-lg border transition-all',
                       selectedSize === size
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background border-border hover:bg-secondary"
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-background border-border hover:bg-secondary'
                     )}
                   >
                     {size}
@@ -237,40 +240,42 @@ export default function ProductPage() {
               </div>
             </div>
 
-            {/* Color Selection */}
-            <div>
-              <h3 className="font-medium mb-3">Color</h3>
-              <div className="space-y-2">
-                {product.colors.map((color) => (
-                  <button
-                    key={color}
-                    onClick={() => setSelectedColor(color)}
-                    className={cn(
-                      "w-full p-3 text-sm rounded-lg border text-left transition-all",
-                      selectedColor === color
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-background border-border hover:bg-secondary"
-                    )}
-                  >
-                    {color}
-                  </button>
-                ))}
+            {/* Colors (optional) */}
+            {colors.length > 0 && (
+              <div>
+                <h3 className="font-medium mb-3">Color</h3>
+                <div className="space-y-2">
+                  {colors.map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setSelectedColor(color)}
+                      className={cn(
+                        'w-full p-3 text-sm rounded-lg border text-left transition-all',
+                        selectedColor === color
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-background border-border hover:bg-secondary'
+                      )}
+                    >
+                      {color}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Quantity */}
             <div>
               <h3 className="font-medium mb-3">Quantity</h3>
               <div className="flex items-center space-x-3">
                 <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                   className="w-10 h-10 rounded-lg border border-border hover:bg-secondary flex items-center justify-center"
                 >
                   -
                 </button>
                 <span className="w-12 text-center">{quantity}</span>
                 <button
-                  onClick={() => setQuantity(quantity + 1)}
+                  onClick={() => setQuantity((q) => q + 1)}
                   className="w-10 h-10 rounded-lg border border-border hover:bg-secondary flex items-center justify-center"
                 >
                   +
@@ -280,26 +285,17 @@ export default function ProductPage() {
 
             {/* Add to Cart */}
             <div className="flex space-x-4">
-              <Button
-                onClick={handleAddToCart}
-                disabled={!product.inStock}
-                className="flex-1"
-                size="lg"
-              >
+              <Button onClick={handleAddToCart} disabled={!canAddToCart} className="flex-1" size="lg">
                 <ShoppingCart className="h-5 w-5 mr-2" />
-                {product.inStock ? 'Add to Cart' : 'Out of Stock'}
+                {inStock ? (canAddToCart ? 'Add to Cart' : 'Select options') : 'Out of Stock'}
               </Button>
-              <Button
-                variant="outline"
-                onClick={handleToggleWishlist}
-                size="lg"
-                className="px-6"
-              >
-                <Heart className={cn("h-5 w-5", inWishlist && "fill-current text-red-500")} />
+
+              <Button variant="outline" onClick={handleToggleWishlist} size="lg" className="px-6">
+                <Heart className={cn('h-5 w-5', inWishlist && 'fill-current text-red-500')} />
               </Button>
             </div>
 
-            {/* Product Features */}
+            {/* Features */}
             <div className="space-y-3 pt-6 border-t border-border">
               <div className="flex items-center space-x-3 text-sm">
                 <Truck className="h-4 w-4 text-primary" />
@@ -317,7 +313,7 @@ export default function ProductPage() {
           </div>
         </div>
 
-        {/* Reviews Section */}
+        {/* Reviews */}
         <div className="mt-16 border-t border-border pt-16">
           <h2 className="text-2xl font-display font-bold mb-8">Customer Reviews</h2>
 
@@ -330,20 +326,12 @@ export default function ProductPage() {
                       <div className="flex items-center space-x-2 mb-2">
                         <span className="font-medium">{review.user}</span>
                         {review.verified && (
-                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                            Verified Purchase
-                          </span>
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Verified Purchase</span>
                         )}
                       </div>
                       <div className="flex items-center space-x-1">
                         {[...Array(5)].map((_, i) => (
-                          <Star
-                            key={i}
-                            className={cn(
-                              "h-4 w-4",
-                              i < review.rating ? "text-yellow-400 fill-current" : "text-muted-foreground"
-                            )}
-                          />
+                          <Star key={i} className={cn('h-4 w-4', i < review.rating ? 'text-yellow-400 fill-current' : 'text-muted-foreground')} />
                         ))}
                       </div>
                     </div>
@@ -359,7 +347,6 @@ export default function ProductPage() {
             </div>
           )}
 
-          {/* TODO: Add review form component */}
           <div className="mt-8 bg-muted rounded-xl p-6">
             <h3 className="font-medium mb-4">Write a Review</h3>
             <p className="text-sm text-muted-foreground">
