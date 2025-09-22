@@ -58,7 +58,7 @@ export function CartDrawer() {
                 <div key={`${item.product._id}-${item.size}-${item.color}`} className="flex items-start space-x-4">
                   <div className="w-20 h-20 bg-secondary rounded-lg overflow-hidden flex-shrink-0">
                     <Image
-                      src={item.product.images[0]}
+                      src={item.product.image}
                       alt={item.product.name}
                       width={80}
                       height={80}
