@@ -41,7 +41,8 @@ export default function LoginPage() {
       }
 
       toast.success('Welcome back!');
-      setTimeout(() => router.push(redirectTo), 300);
+      // setTimeout(() => router.push(redirectTo), 300);
+      router.push('/')
     } catch (err) {
       console.error(err);
       const msg = 'Something went wrong';
