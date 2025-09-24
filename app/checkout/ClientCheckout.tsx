@@ -51,7 +51,7 @@ export default function ClientCheckout() {
                 productId: ci.product._id,
                 name: ci.product.name,
                 brand: ci.product.brand,
-                image: ci.product.images?.[0] || "/placeholder.png",
+                image: ci.product.image,
                 unitPrice: Math.round((ci.product.price ?? 0) * 100),
                 quantity: ci.quantity,
                 size: ci.size,

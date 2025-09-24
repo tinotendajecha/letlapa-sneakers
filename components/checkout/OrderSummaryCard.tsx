@@ -34,13 +34,15 @@ interface OrderSummaryCardProps {
 // Try to read an image URL from different shapes of cart items
 function getItemImage(item: CartItem): string {
   const anyItem = item as any;
-  return (
+  const imageUrl =
     anyItem.image ||
     anyItem.imageUrl ||
     anyItem.product?.images?.[0] ||
     anyItem.images?.[0] ||
-    "/placeholder.png"
-  );
+    "https://images.pexels.com/photos/1464625/pexels-photo-1464625.jpeg";
+    
+  console.log("CartItem image for", anyItem.name, ":", imageUrl);
+  return imageUrl;
 }
 
 export function OrderSummaryCard({
@@ -96,6 +98,10 @@ export function OrderSummaryCard({
                         className="w-full h-full object-cover"
                       />
                     </div>
+
+               
+                    
+
 
                     <div className="flex-1">
                       <h4 className="font-medium text-[#3b2a1b] dark:text-[#f5f1eb]">{item.name}</h4>
