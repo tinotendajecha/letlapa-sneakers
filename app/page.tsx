@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { ArrowRight, Truck, Shield, Star } from 'lucide-react';
+import { ArrowRight, Truck, Shield, Star, RotateCcw } from 'lucide-react';
 import { ProductCard } from '@/components/products/product-card';
 import { Button } from '@/components/ui/button';
 import { fetchFeaturedProducts } from '@/lib/groq-queries/featuredProducts';
@@ -8,77 +8,96 @@ import { Product } from '@/lib/store';
 import { useState, useEffect } from 'react';
 
 export default function Home() {
-  // const featuredProducts = mockProducts.filter(product => product.featured);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
-      const products = await fetchFeaturedProducts();
-      setFeaturedProducts(products);
+      setIsLoading(true);
+      setError(null);
+      try {
+        const products = await fetchFeaturedProducts();
+        setFeaturedProducts(products || []);
+      } catch (e) {
+        setError('Could not load featured kicks.');
+      } finally {
+        setIsLoading(false);
+      }
     };
     fetchData();
   }, []);
 
+  const retry = () => {
+    setIsLoading(true);
+    setError(null);
+    fetchFeaturedProducts()
+      .then((p) => setFeaturedProducts(p || []))
+      .catch(() => setError('Could not load featured kicks.'))
+      .finally(() => setIsLoading(false));
+  };
+
   return (
     <div className="min-h-screen">
-      {/* Hero Section */}
+      {/* Hero Section (unchanged) */}
+      {/* ... your hero + badges here ... */}
       <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
-        {/* Background Image */}
-        <div className="absolute inset-0 z-0">
-          <div 
-            className="w-full h-full bg-cover bg-center bg-no-repeat"
-            style={{
-              backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=1600')`
-            }}
-          />
+              {/* Background Image */}
+              <div className="absolute inset-0 z-0">
+                <div 
+                  className="w-full h-full bg-cover bg-center bg-no-repeat"
+                  style={{
+                    backgroundImage: `linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), url('https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=1600')`
+                  }}
+                />
+              </div>
+      
+              {/* Content */}
+              <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
+                <div className="glass rounded-2xl p-8 md:p-12 text-white">
+                  <h1 className="text-4xl md:text-6xl font-display font-bold mb-6 text-balance">
+                    Authentic Kicks from the Heart of{' '}
+                    <span className="bg-gradient-to-r from-brand-warm-tan to-brand-cream bg-clip-text text-transparent">
+                      South Africa
+                    </span>
+                  </h1>
+                  <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl mx-auto">
+                    Rooted in Upington and Pofadder, we bring you premium sneakers with 
+                    guaranteed authenticity and fast nationwide delivery.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                    <Button size="lg" asChild className="btn-primary">
+                      <Link href="/shop" className="flex items-center">
+                        Shop Collection
+                        <ArrowRight className="ml-2 h-5 w-5" />
+                      </Link>
+                    </Button>
+                    <Button size="lg" variant="outline" asChild className="glass border-white/20 text-white hover:bg-white/10">
+                      <Link href="/about">Our Story</Link>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+      
+              {/* Trust Badges */}
+             <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 
+        flex flex-col sm:flex-row gap-3 sm:gap-6 px-4 w-full max-w-lg sm:max-w-none 
+        justify-center items-center">
+        
+        <div className="flex items-center space-x-2 glass px-3 py-2 rounded-md w-full sm:w-auto">
+          <Truck className="h-5 w-5" />
+          <span className="text-sm font-medium">Fast SA delivery</span>
         </div>
-
-        {/* Content */}
-        <div className="relative z-10 text-center px-4 max-w-4xl mx-auto">
-          <div className="glass rounded-2xl p-8 md:p-12 text-white">
-            <h1 className="text-4xl md:text-6xl font-display font-bold mb-6 text-balance">
-              Authentic Kicks from the Heart of{' '}
-              <span className="bg-gradient-to-r from-brand-warm-tan to-brand-cream bg-clip-text text-transparent">
-                South Africa
-              </span>
-            </h1>
-            <p className="text-lg md:text-xl text-white/90 mb-8 max-w-2xl mx-auto">
-              Rooted in Upington and Pofadder, we bring you premium sneakers with 
-              guaranteed authenticity and fast nationwide delivery.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Button size="lg" asChild className="btn-primary">
-                <Link href="/shop" className="flex items-center">
-                  Shop Collection
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild className="glass border-white/20 text-white hover:bg-white/10">
-                <Link href="/about">Our Story</Link>
-              </Button>
-            </div>
-          </div>
+        <div className="flex items-center space-x-2 glass px-3 py-2 rounded-md w-full sm:w-auto">
+          <Shield className="h-5 w-5" />
+          <span className="text-sm font-medium">Authenticity guaranteed</span>
         </div>
-
-        {/* Trust Badges */}
-       <div className="absolute bottom-1.5 left-1/2 -translate-x-1/2 
-  flex flex-col sm:flex-row gap-3 sm:gap-6 px-4 w-full max-w-lg sm:max-w-none 
-  justify-center items-center">
-  
-  <div className="flex items-center space-x-2 glass px-3 py-2 rounded-md w-full sm:w-auto">
-    <Truck className="h-5 w-5" />
-    <span className="text-sm font-medium">Fast SA delivery</span>
-  </div>
-  <div className="flex items-center space-x-2 glass px-3 py-2 rounded-md w-full sm:w-auto">
-    <Shield className="h-5 w-5" />
-    <span className="text-sm font-medium">Authenticity guaranteed</span>
-  </div>
-  <div className="flex items-center space-x-2 glass px-3 py-2 rounded-md w-full sm:w-auto">
-    <Star className="h-5 w-5" />
-    <span className="text-sm font-medium">5-star rated</span>
-  </div>
-</div>
-      </section>
+        <div className="flex items-center space-x-2 glass px-3 py-2 rounded-md w-full sm:w-auto">
+          <Star className="h-5 w-5" />
+          <span className="text-sm font-medium">5-star rated</span>
+        </div>
+      </div>
+            </section>
 
       {/* Featured Products */}
       <section className="py-16 bg-background">
@@ -93,23 +112,70 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product._id} product={product} />
-            ))}
-          </div>
+          {/* Loading state: spinner + skeleton cards */}
+          {isLoading && (
+            <>
+              <div className="flex justify-center mb-8" role="status" aria-live="polite" aria-busy="true">
+                <span className="sr-only">Loading featured kicks…</span>
+                <div className="h-10 w-10 rounded-full border-4 border-border border-t-transparent animate-spin" />
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="rounded-xl border bg-card p-4 animate-pulse"
+                    aria-hidden="true"
+                  >
+                    <div className="aspect-square rounded-lg bg-muted mb-4" />
+                    <div className="h-4 w-2/3 bg-muted rounded mb-2" />
+                    <div className="h-4 w-1/3 bg-muted rounded mb-4" />
+                    <div className="h-10 w-full bg-muted rounded" />
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
 
-          <div className="text-center">
-            <Button size="lg" variant="outline" asChild>
-              <Link href="/shop">
-                View All Sneakers
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
+          {/* Error state */}
+          {!isLoading && error && (
+            <div className="text-center mb-12">
+              <p className="text-sm text-red-600 mb-4">{error}</p>
+              <Button onClick={retry} variant="outline">
+                <RotateCcw className="mr-2 h-4 w-4" /> Try again
+              </Button>
+            </div>
+          )}
+
+          {/* Loaded state */}
+          {!isLoading && !error && (
+            <>
+              {featuredProducts.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+                  {featuredProducts.map((product) => (
+                    <ProductCard key={product._id} product={product} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-muted-foreground mb-12">
+                  No featured kicks yet. Check back soon!
+                </div>
+              )}
+
+              <div className="text-center">
+                <Button size="lg" variant="outline" asChild>
+                  <Link href="/shop">
+                    View All Sneakers
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
+      {/* About + Newsletter sections (unchanged) */}
+      {/* ... */}
       {/* About Preview */}
       <section className="py-16 bg-card">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
