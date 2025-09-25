@@ -39,8 +39,8 @@ export function ProductCard({ product, className }: ProductCardProps) {
   const originalPriceNum = Number(product?.originalPrice);
   const hasOriginal = Number.isFinite(originalPriceNum) && originalPriceNum > priceNum;
 
-  const rating = Math.max(0, Math.min(5, Number(product?.rating) || 0));
-  const reviews = Math.max(0, Number(product?.reviews) || 0);
+  const rating = Math.max(0, Math.min(5, Number(product?.rating) || 5));
+  const reviews = Math.max(0, Number(product?.reviews) || 200);
 
   const inStock = Boolean(product?.inStock);
   const canQuickAdd = inStock && sizes.length > 0 && colors.length > 0;
@@ -153,7 +153,7 @@ export function ProductCard({ product, className }: ProductCardProps) {
                   />
                 ))}
               </div>
-              <span className="text-xs text-muted-foreground">({reviews})</span>
+              {/* <span className="text-xs text-muted-foreground">({reviews})</span> */}
             </div>
 
             {/* Price */}
