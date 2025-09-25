@@ -180,15 +180,6 @@ export default function LoginPage() {
             </p>
           </div>
         </div>
-
-        {/* Info */}
-        <div className="text-center">
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-            <p className="text-sm text-yellow-800 dark:text-yellow-200">
-              ⚠️ Authentication uses a secure cookie. Make sure JWT_SECRET is set.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );
