@@ -78,8 +78,8 @@ export default function ContactPage() {
                 <div>
                   <h3 className="font-medium mb-1">Call Us</h3>
                   <p className="text-muted-foreground text-sm">
-                    <a href="tel:+27123456789" className="hover:text-primary transition-colors">
-                      +27 12 345 6789
+                    <a href="tel:+27612135627" className="hover:text-primary transition-colors">
+                      +27612135627
                     </a>
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">
@@ -116,7 +116,7 @@ export default function ContactPage() {
                   </p>
                   <button
                     onClick={() => {
-                      const phoneNumber = "27123456789";
+                      const phoneNumber = "27612135627"; // TODO: Replace with actual Letlapa WhatsApp number
                       const message = "Hi! I have a question about your sneakers.";
                       const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
                       window.open(url, '_blank');
