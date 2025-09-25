@@ -3,10 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import {
-  Search, ShoppingCart, Heart, Menu, X, User, Sun, Moon,
-  Instagram, Facebook, LogOut
-} from 'lucide-react';
+import { Search, ShoppingCart, Heart, Menu, X, User, Sun, Moon, Instagram, Facebook, LogOut } from 'lucide-react';
 import { useStore } from '@/lib/store';
 import { useTheme } from '@/components/ui/theme-provider';
 import { Button } from '@/components/ui/button';
@@ -22,30 +19,15 @@ export function Header() {
   const [session, setSession] = useState<MeResponse | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
 
-  const {
-    cartCount,
-    wishlistItems,
-    isMobileMenuOpen,
-    setMobileMenuOpen,
-    setCartOpen,
-    setWishlistOpen,
-  } = useStore();
-
+  const { cartCount, wishlistItems, isMobileMenuOpen, setMobileMenuOpen, setCartOpen, setWishlistOpen } = useStore();
   const { theme, setTheme } = useTheme();
-
-  const navigation = [
-    { name: 'Home', href: '/' },
-    { name: 'Shop', href: '/shop' },
-    { name: 'My Orders', href: '/my-orders' },
-    { name: 'About', href: '/about' },
-    { name: 'Contact', href: '/contact' },
-  ];
 
   const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+
+    const refreshSession = async () => {
       try {
         const res = await fetch('/api/auth/me', { cache: 'no-store' });
         const data: MeResponse = await res.json();
@@ -55,9 +37,31 @@ export function Header() {
       } finally {
         if (!cancelled) setLoadingSession(false);
       }
-    })();
-    return () => { cancelled = true; };
-  }, []);
+    };
+
+    // initial load
+    refreshSession();
+
+    // revalidate when login page signals a change
+    const onAuthChanged = () => refreshSession();
+    window.addEventListener('auth:changed', onAuthChanged);
+
+    // revalidate on focus / when tab becomes visible
+    const onFocus = () => refreshSession();
+    const onVisibility = () => { if (document.visibilityState === 'visible') refreshSession(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+
+    // revalidate on route change too (cheap + avoids stale header)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // NOTE: we rely on useEffect re-running because it depends on pathname:
+    return () => {
+      cancelled = true;
+      window.removeEventListener('auth:changed', onAuthChanged);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [pathname]);
 
   const handleLogout = async () => {
     try {
@@ -65,16 +69,24 @@ export function Header() {
       if (!res.ok) throw new Error('Logout failed');
       toast.success('Signed out');
       setSession({ authenticated: false });
-      // If you guard some routes via middleware, redirect to home:
+      // also tell anyone else listening
+      window.dispatchEvent(new Event('auth:changed'));
       router.push('/');
       router.refresh();
-    } catch (e) {
+    } catch {
       toast.error('Could not sign out');
     }
   };
 
   const isAuthed = !!session?.authenticated;
   const firstName = session?.user?.name?.split(' ')?.[0];
+
+  const navigation = [
+  { name: 'Home', href: '/' },
+  { name: 'Shop', href: '/shop' },
+  { name: 'About', href: '/about' },
+  { name: 'Contact', href: '/contact' },
+];
 
   return (
     <>

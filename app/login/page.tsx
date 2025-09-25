@@ -41,8 +41,12 @@ export default function LoginPage() {
       }
 
       toast.success('Welcome back!');
-      // setTimeout(() => router.push(redirectTo), 300);
-      router.push('/')
+
+      // 🔥 tell the app auth state changed + refresh cookies-bound trees
+      window.dispatchEvent(new Event('auth:changed'));
+      router.refresh();
+
+      router.push(redirectTo ?? '/');
     } catch (err) {
       console.error(err);
       const msg = 'Something went wrong';
